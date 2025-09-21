@@ -9,22 +9,38 @@ import { StatRow } from '@/components/StatRow';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Game, WinProbabilityData } from '@/lib/types';
 import { fetchGameById, fetchWinProbabilityData } from '@/lib/mock-data';
-import { Lock, Zap } from 'lucide-react';
+import { Lock, Zap, Wallet } from 'lucide-react';
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem';
 
 export default function GameDetailPage() {
   const params = useParams();
   const router = useRouter();
   const gameId = params.id as string;
-  
+
   const [game, setGame] = useState<Game | null>(null);
   const [winProbData, setWinProbData] = useState<WinProbabilityData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+
+  const { address, isConnected } = useAccount();
+  const { sendTransaction, data: hash } = useSendTransaction();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  });
 
   useEffect(() => {
     loadGameData();
   }, [gameId]);
+
+  useEffect(() => {
+    if (isConfirmed) {
+      setShowAdvancedStats(true);
+      setIsPurchasing(false);
+    }
+  }, [isConfirmed]);
 
   const loadGameData = async () => {
     try {
@@ -50,10 +66,31 @@ export default function GameDetailPage() {
     }
   };
 
-  const handleUnlockAdvancedStats = () => {
-    // In a real app, this would trigger a micro-transaction
-    alert('Micro-transaction: $0.50 for advanced stats access');
-    setShowAdvancedStats(true);
+  const handleUnlockAdvancedStats = async () => {
+    if (!isConnected) {
+      alert('Please connect your wallet to unlock advanced stats');
+      return;
+    }
+
+    if (!address) {
+      alert('No wallet address found');
+      return;
+    }
+
+    setIsPurchasing(true);
+
+    try {
+      // Send micro-transaction of $0.50 (0.0005 ETH at current prices)
+      // In production, this would be sent to the app's treasury address
+      sendTransaction({
+        to: address, // For demo purposes, sending to self
+        value: parseEther('0.0005'), // $0.50 worth of ETH
+      });
+    } catch (error) {
+      console.error('Transaction failed:', error);
+      alert('Transaction failed. Please try again.');
+      setIsPurchasing(false);
+    }
   };
 
   if (loading) {
@@ -186,11 +223,27 @@ export default function GameDetailPage() {
               </div>
               <button
                 onClick={handleUnlockAdvancedStats}
-                className="inline-flex items-center space-x-2 bg-accent text-black px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity duration-200"
+                disabled={isPurchasing || isConfirming}
+                className="inline-flex items-center space-x-2 bg-accent text-black px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Zap className="w-4 h-4" />
-                <span>Unlock for $0.50</span>
+                {isPurchasing || isConfirming ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    <span>{isConfirming ? 'Confirming...' : 'Processing...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-4 h-4" />
+                    <span>Unlock for $0.50</span>
+                  </>
+                )}
               </button>
+
+              {!isConnected && (
+                <p className="text-xs text-gray-500 text-center">
+                  Connect your wallet to unlock advanced stats
+                </p>
+              )}
             </div>
           )}
         </div>
