@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: hsl(234, 100%, 50%);
+  --accent: hsl(40, 90%, 50%);
+  --bg: hsl(230, 60%, 95%);
+  --surface: hsl(0, 0%, 100%);
+  --danger: hsl(10, 80%, 50%);
+  --success: hsl(160, 70%, 50%);
+  --muted-foreground: hsl(215, 20%, 65%);
+}
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  body {
+    @apply bg-gray-900 text-white antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-gray-800 rounded-lg shadow-card border border-gray-700;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-hover transition-shadow duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors duration-200;
+  }
+}
