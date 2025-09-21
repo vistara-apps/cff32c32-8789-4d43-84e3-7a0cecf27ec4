@@ -8,13 +8,17 @@ import { WinProbChart } from '@/components/WinProbChart';
 import { StatRow } from '@/components/StatRow';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Game, WinProbabilityData } from '@/lib/types';
-import { fetchGameById, fetchWinProbabilityData } from '@/lib/mock-data';
+import { fetchGameDetails, fetchWinProbability } from '@/lib/api';
+import { checkPremiumAccess } from '@/lib/payments';
 import { Lock, Zap } from 'lucide-react';
+import { PaymentModal } from '@/components/PaymentModal';
 
 export default function GameDetailPage() {
   const params = useParams();
   const router = useRouter();
   const gameId = params.id as string;
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const [game, setGame] = useState<Game | null>(null);
   const [winProbData, setWinProbData] = useState<WinProbabilityData[]>([]);
@@ -29,18 +33,20 @@ export default function GameDetailPage() {
   const loadGameData = async () => {
     try {
       setLoading(true);
-      const [gameData, probData] = await Promise.all([
-        fetchGameById(gameId),
-        fetchWinProbabilityData(gameId)
+      const [gameData, probData, premiumAccess] = await Promise.all([
+        fetchGameDetails(gameId),
+        fetchWinProbability(gameId),
+        checkPremiumAccess('demo_user', 'advanced_stats', gameId) // In production, get userId from auth
       ]);
-      
+
       if (!gameData) {
         setError('Game not found');
         return;
       }
-      
+
       setGame(gameData);
       setWinProbData(probData);
+      setHasPremiumAccess(premiumAccess.hasAccess);
       setError(null);
     } catch (err) {
       setError('Failed to load game data');
@@ -51,9 +57,21 @@ export default function GameDetailPage() {
   };
 
   const handleUnlockAdvancedStats = () => {
-    // In a real app, this would trigger a micro-transaction
-    alert('Micro-transaction: $0.50 for advanced stats access');
+    if (hasPremiumAccess) {
+      setShowAdvancedStats(true);
+    } else {
+      setShowPaymentModal(true);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setHasPremiumAccess(true);
     setShowAdvancedStats(true);
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment failed:', error);
+    // Could show a toast notification here
   };
 
   if (loading) {
@@ -140,7 +158,7 @@ export default function GameDetailPage() {
         <div className="card p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white">Advanced Stats</h3>
-            {!showAdvancedStats && (
+            {!hasPremiumAccess && (
               <div className="flex items-center space-x-2">
                 <Lock className="w-4 h-4 text-accent" />
                 <span className="text-sm text-accent">Premium</span>
@@ -148,7 +166,7 @@ export default function GameDetailPage() {
             )}
           </div>
           
-          {showAdvancedStats ? (
+          {hasPremiumAccess ? (
             <div className="space-y-2">
               <StatRow 
                 label="Passing Yards" 
@@ -212,6 +230,16 @@ export default function GameDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        feature="advanced_stats"
+        gameId={gameId}
+        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentError={handlePaymentError}
+      />
     </div>
   );
 }
