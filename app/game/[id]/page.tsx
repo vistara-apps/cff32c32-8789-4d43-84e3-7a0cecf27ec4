@@ -8,7 +8,7 @@ import { WinProbChart } from '@/components/WinProbChart';
 import { StatRow } from '@/components/StatRow';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Game, WinProbabilityData } from '@/lib/types';
-import { fetchGameById, fetchWinProbabilityData } from '@/lib/mock-data';
+import { fetchGameDetails, fetchWinProbability } from '@/lib/api';
 import { Lock, Zap } from 'lucide-react';
 
 export default function GameDetailPage() {
@@ -30,15 +30,15 @@ export default function GameDetailPage() {
     try {
       setLoading(true);
       const [gameData, probData] = await Promise.all([
-        fetchGameById(gameId),
-        fetchWinProbabilityData(gameId)
+        fetchGameDetails(gameId),
+        fetchWinProbability(gameId)
       ]);
-      
+
       if (!gameData) {
         setError('Game not found');
         return;
       }
-      
+
       setGame(gameData);
       setWinProbData(probData);
       setError(null);

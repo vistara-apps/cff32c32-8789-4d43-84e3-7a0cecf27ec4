@@ -6,7 +6,7 @@ import { ScoreCard } from '@/components/ScoreCard';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Game } from '@/lib/types';
-import { fetchGames } from '@/lib/mock-data';
+import { fetchLiveGames } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
@@ -30,7 +30,7 @@ export default function HomePage() {
   const loadGames = async () => {
     try {
       setLoading(true);
-      const gamesData = await fetchGames();
+      const gamesData = await fetchLiveGames();
       setGames(gamesData);
       setError(null);
     } catch (err) {
@@ -43,11 +43,11 @@ export default function HomePage() {
 
   const updateScores = async () => {
     try {
-      const updatedGames = await fetchGames();
-      
+      const updatedGames = await fetchLiveGames();
+
       // Check for score changes
-      const hasScoreUpdate = updatedGames.some((newGame, index) => {
-        const oldGame = games[index];
+      const hasScoreUpdate = updatedGames.some((newGame) => {
+        const oldGame = games.find(g => g.gameId === newGame.gameId);
         return oldGame && (
           newGame.currentScoreHome !== oldGame.currentScoreHome ||
           newGame.currentScoreAway !== oldGame.currentScoreAway
